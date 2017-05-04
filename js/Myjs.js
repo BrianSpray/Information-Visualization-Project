@@ -11,6 +11,8 @@ var mbAttr = 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</
     mbUrl = 'https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoicGxhbmVtYWQiLCJhIjoiemdYSVVLRSJ9.g3lbg_eN0kztmsfIPxa9MQ';
 
 
+
+
 var grayscale = L.tileLayer(mbUrl, {
         id: 'mapbox.light',
         attribution: mbAttr
@@ -113,6 +115,7 @@ function clearMap() {
 // Click the small box on Map and start drawing to do query.
 //*****************************************************************************************************************************************	
 
+
 map.on('draw:created', function (e) {
 	
 	clearMap();
@@ -126,27 +129,62 @@ map.on('draw:created', function (e) {
 		then(function(d){var result = d.map(function(a) {return a.properties;});
 		console.log(result);		// Trip Info: avspeed, distance, duration, endtime, maxspeed, minspeed, starttime, streetnames, taxiid, tripid
 		DrawRS(result);
+        barChart(result);
 		});
 	}
 	drawnItems.addLayer(layer);			//Add your Selection to Map  
 });
+
+
+var margin =  {
+    top: 20,
+    right: 20,
+    bottom: 30,
+    left: 40
+}, 
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+var x = d3.scaleBand().range([0, width]).padding(0.1);
+
+var y = d3.scaleLinear().range([height, 0]);
+
+var svg = d3.select("#graph-display").append("svg").attr("width", width + margin.left + margin.right).attr("height", height + margin.top + margin.bottom).append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+function barChart(e) {
+
+    x.domain(e.map(function (d) { return d.tripId; }))
+
+   svg.selectAll(".bar").data(e).enter().append("rect").attr("class", "bar");
+
+   svg.append("g")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(x));
+
+  // add the y Axis
+  svg.append("g")
+      .call(d3.axisLeft(y));
+
+}
+
+
 //*****************************************************************************************************************************************
 // DrawRS Function:
 // Input is a list of Trip and the function draw these trips on Map based on their IDs
 //*****************************************************************************************************************************************
 function DrawRS(trips) {
-	for (var j=0; j<trips.length; j++) {  // Check Number of Segments and go through all segments
-		var TPT = new Array();			  
-		TPT = TArr[trips[j].tripid].split(',');  		 // Find each segment in TArr Dictionary. 
-		var polyline = new L.Polyline([]).addTo(drawnItems);
+    for (var j=0; j<trips.length; j++) {  // Check Number of Segments and go through all segments
+        var TPT = new Array();              
+        TPT = TArr[trips[j].tripid].split(',');           // Find each segment in TArr Dictionary. 
+        var polyline = new L.Polyline([]).addTo(drawnItems);
         polyline.setStyle({
             color: 'red',                      // polyline color
-			weight: 1,                         // polyline weight
-			opacity: 0.5,                      // polyline opacity
-			smoothFactor: 1.0  
+            weight: 1,                         // polyline weight
+            opacity: 0.5,                      // polyline opacity
+            smoothFactor: 1.0  
         });
-		for(var y = 0; y < TPT.length-1; y=y+2){    // Parse latlng for each segment
-			polyline.addLatLng([parseFloat(TPT[y+1]), parseFloat(TPT[y])]);
-		}
-	}		
+        for(var y = 0; y < TPT.length-1; y=y+2){    // Parse latlng for each segment
+            polyline.addLatLng([parseFloat(TPT[y+1]), parseFloat(TPT[y])]);
+        }
+    }        
 }

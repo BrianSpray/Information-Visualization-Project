@@ -6,6 +6,10 @@ html {
 	margin: 0; 
 }
 
+.bar {
+	fill: steelblue;
+}
+
 #content-container {
 	height: 100%;
 	width: 100%;
