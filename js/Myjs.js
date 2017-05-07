@@ -153,9 +153,17 @@ var svg = d3.select("#graph-display").append("svg").attr("width", width + margin
 
 function barChart(e) {
 
-    x.domain(e.map(function (d) { return d.tripId; }))
+    x.domain(e.map(function(d) { return d.tripid; }));
+    y.domain([0, d3.max(e, function(d) { return d.avspeed; })]);
 
-   svg.selectAll(".bar").data(e).enter().append("rect").attr("class", "bar");
+   svg.selectAll(".bar")
+    .data(e)
+   .enter().append("rect")
+    .attr("class", "bar")
+    .attr("x", function(d) { return d.tripid; })
+    .attr("width", x.bandwidth())
+    .attr("y", function(d) { return d.avspeed; })
+    .attr("height", function(d) { return height - y(d.avspeed); });
 
    svg.append("g")
       .attr("transform", "translate(0," + height + ")")
