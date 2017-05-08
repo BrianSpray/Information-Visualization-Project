@@ -115,6 +115,7 @@ function clearMap() {
 // Click the small box on Map and start drawing to do query.
 //*****************************************************************************************************************************************	
 
+var bar, line = false;
 
 map.on('draw:created', function (e) {
 	
@@ -129,14 +130,28 @@ map.on('draw:created', function (e) {
 		then(function(d){var result = d.map(function(a) {return a.properties;});
 		console.log(result);		// Trip Info: avspeed, distance, duration, endtime, maxspeed, minspeed, starttime, streetnames, taxiid, tripid
 		DrawRS(result);
-        barChart(result);
+
+        if (bar === true) { 
+            barChart(result);
+        } else if (line === true) {
+
+        }
+
+        
 		});
 	}
 	drawnItems.addLayer(layer);			//Add your Selection to Map  
 });
 
+function barChartTrue() {
+    d3.select("#graph-display").select("svg").remove();
+    bar = true;
+    line = false;
+}
 
-
+function lineChart(e) {
+    console.log("Woo wee");
+}
 
 function barChart(e) {
 
@@ -163,6 +178,8 @@ function barChart(e) {
                 .attr("height", height + margin.top + margin.bottom)
                 .append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+    var tooltip = d3.select("body").append("div").attr("class", "toolTip");
+
     var hourParser = d3.isoParse; //d3.timeParse("%I:%M%p");
 
     /*e.forEach(function(d) {
@@ -176,7 +193,7 @@ function barChart(e) {
         .rollup(function (d) { return d3.mean(d, function (g) { return g.avspeed; }); })
         .entries(e);
         console.log(JSON.stringify(dataset));
-
+    
 
     x.domain(dataset.map(function(d) { return new Date(d.key); }));
     y.domain([0, d3.max(dataset, function(d) { return d.value; })]);
@@ -188,7 +205,16 @@ function barChart(e) {
     .attr("x", function(d) { return x(new Date(d.key)); })
     .attr("width", x.bandwidth())
     .attr("y", function(d) { return y(d.value); })
-    .attr("height", function(d) { return height - y(d.value); });
+    .attr("height", function(d) { return height - y(d.value); })
+    .on("mousemove", function(d){
+            tooltip
+              .style("left", d3.event.pageX - 50 + "px")
+              .style("top", d3.event.pageY - 70 + "px")
+              .style("display", "inline-block")
+              .html("<strong>"  + (d.key) + "</strong>" + "<br>" + "Average Speed" + "<br>" + "<strong>"  + (d.value) + "</strong>");
+        })
+    .on("mouseout", function(d){ tooltip.style("display", "none");});
+    
 
    svg.append("g")
       .attr("transform", "translate(0," + height + ")")
