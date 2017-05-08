@@ -182,11 +182,6 @@ function barChart(e) {
 
     var hourParser = d3.isoParse; //d3.timeParse("%I:%M%p");
 
-    /*e.forEach(function(d) {
-        d.date = d3.timeHour.round(hourParser(d.starttime));
-        d.avspeed = +d.avspeed;
-        console.log("Start Time: " + timeFormatter(d3.timeHour.round(d.date)) + " AvSpeed: " + d.avspeed);
-    });*/
 
     var dataset = d3.nest()
         .key(function (d) { return d3.timeHour.round(hourParser(d.starttime)); }).sortKeys(d3.ascending)
