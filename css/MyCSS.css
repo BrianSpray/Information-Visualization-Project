@@ -96,21 +96,11 @@ html {
 	display: none;
 }
 
-rect.bordered {
-	stroke: #E6E6E6;
-	stroke-width:2px;   
-	}
+.arc text {
+  font: 10px sans-serif;
+  text-anchor: middle;
+}
 
-	text.mono {
-	font-size: 9pt;
-	font-family: Consolas, courier;
-	fill: #aaa;
-	}
-
-	text.axis-workweek {
-	fill: #000;
-	}
-
-	text.axis-worktime {
-	fill: #000;
-	}
+.arc path {
+  stroke: #fff;
+}
