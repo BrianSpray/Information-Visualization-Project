@@ -115,7 +115,7 @@ function clearMap() {
 // Click the small box on Map and start drawing to do query.
 //*****************************************************************************************************************************************	
 
-var pie, scatter, pie, bar, line = false;
+var horizontal, scatter, pie, bar, line = false;
 
 map.on('draw:created', function (e) {
 	
@@ -135,7 +135,7 @@ map.on('draw:created', function (e) {
             barChart(result);
         } else if (line === true) {
             lineChart(result);
-        } else if (pie === true){
+        } else if (horizontal === true){
             horizontalBarChart(result);
         } else if (scatter === true) {
             scatterplot(result);
@@ -153,6 +153,7 @@ function barChartTrue() {
     line = false;
     pie = false;
     scatter = false;
+    horizontal = false;
 }
 
 function lineChartTrue(){
@@ -161,14 +162,16 @@ function lineChartTrue(){
     line = true;
     pie = false;
     scatter = false;
+    horizontal = false;
 }
 
-function pieChartTrue(){
+function horizontalCharTrue(){
     d3.select("#graph-display").select("svg").remove();
-    pie = true;
+    pie = false;
     bar = false;
     line = false;
     scatter = false;
+    horizontal = true;
 }
 
 function scatterPlotTrue() {
@@ -177,11 +180,12 @@ function scatterPlotTrue() {
     bar = false;
     line = false;
     scatter = true;
+    horizontal = false;
 }
 
-function heatMapTrue() {
+function pieChartTrue() {
     d3.select("#graph-display").select("svg").remove();
-    pie = false;
+    horizontal = false;
     bar = false;
     line = false;
     scatter = false;
