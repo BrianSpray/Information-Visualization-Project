@@ -115,7 +115,7 @@ function clearMap() {
 // Click the small box on Map and start drawing to do query.
 //*****************************************************************************************************************************************	
 
-var bar, line = false;
+var heat, scatter, pie, bar, line = false;
 
 map.on('draw:created', function (e) {
 	
@@ -134,10 +134,14 @@ map.on('draw:created', function (e) {
         if (bar === true) { 
             barChart(result);
         } else if (line === true) {
-
+            lineChart(result);
+        } else if (pie === true){
+            horizontalBarChart(result);
+        } else if (scatter === true) {
+            scatterplot(result);
+        } else if (heat === true) {
+            heatMap(result);
         }
-
-        
 		});
 	}
 	drawnItems.addLayer(layer);			//Add your Selection to Map  
@@ -147,10 +151,303 @@ function barChartTrue() {
     d3.select("#graph-display").select("svg").remove();
     bar = true;
     line = false;
+    pie = false;
+    scatter = false;
+}
+
+function lineChartTrue(){
+    d3.select("#graph-display").select("svg").remove();
+    bar = false;
+    line = true;
+    pie = false;
+    scatter = false;
+}
+
+function pieChartTrue(){
+    d3.select("#graph-display").select("svg").remove();
+    pie = true;
+    bar = false;
+    line = false;
+    scatter = false;
+}
+
+function scatterPlotTrue() {
+    d3.select("#graph-display").select("svg").remove();
+    pie = false;
+    bar = false;
+    line = false;
+    scatter = true;
+}
+
+function heatMapTrue() {
+    d3.select("#graph-display").select("svg").remove();
+    pie = false;
+    bar = false;
+    line = false;
+    scatter = false;
+    heat = true;
 }
 
 function lineChart(e) {
-    console.log("Woo wee");
+    var margin =  {
+        top: 20,
+        right: 20,
+        bottom: 50,
+    left: 40
+    }, 
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+    var x = d3.scaleBand().range([0, width], .05);
+    var y = d3.scaleLinear().range([height, 0]);
+
+    var xAxis = d3.axisBottom().scale(x).tickFormat(d3.timeFormat("%I:%M %p"));
+    var yAxis = d3.axisLeft().scale(y).ticks(20);
+
+    var svg = d3.select("#graph-display").append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var hourParser = d3.isoParse;
+
+    var dataset = d3.nest()
+        .key(function (d) { return d3.timeHour.round(hourParser(d.starttime)); }).sortKeys(d3.ascending)
+        .rollup(function (d) { return d3.mean(d, function (g) { return g.duration; }); })
+        .entries(e);
+        console.log(JSON.stringify(dataset));
+
+    var line = d3.line()
+    .x(function(d) { return x(d.key); })
+    .y(function(d) { return y(d.value); });
+
+     x.domain(dataset.map(function(d) { return new Date(d.key); }));
+     y.domain(d3.extent(dataset, function(d) { return d.value; }));
+
+    svg.append("g")
+    .append("text")
+    .attr("x", width/2)             
+    .attr("y", 0)
+    .attr("text-anchor", "middle")  
+    .attr('dy', -8)
+    .text("Visualizing average trip during per hour: ");
+
+
+  svg.append("g")
+      .attr("transform", "translate(-32," + height + ")")
+      .call(xAxis)
+      .selectAll("text")
+      .style("text-anchor", "end")
+      .attr("dx", "-.8em")
+      .attr("dy", "-.55em")
+      .attr("transform", "rotate(-45)" );
+
+  svg.append("g")
+      .call(yAxis)
+    .append("text")
+      .attr("fill", "#000")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", "0.71em")
+      .attr("text-anchor", "end")
+      .text("Duration");
+
+   // Add the valueline path.
+  svg.append("path")
+      .data([dataset])
+      .attr("class", "line")
+      .attr("d", line);
+}
+
+function scatterplot(e) {
+
+var margin = {top: 20, right: 20, bottom: 30, left: 40},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+    var dataset = d3.nest()
+        .key(function (d) { return d.streetnames[0] }).sortKeys(d3.ascending)
+        .rollup(function(d) { return {"avduration": d3.mean(d, function (g) { return g.duration; }), "avspeed": d3.mean(d, function (g) { return g.avspeed; })}})
+        .entries(e);
+        console.log(JSON.stringify(dataset));
+
+    // setup x 
+    var xValue = function(d) { return d.value.avspeed;}, // data -> value
+        xScale = d3.scaleLinear().range([0, width]), // value -> display
+        xMap = function(d) { return xScale(xValue(d));}, // data -> display
+        xAxis = d3.axisBottom().scale(xScale);
+
+    // setup y
+    var yValue = function(d) { return d.value.avduration;}, // data -> value
+        yScale = d3.scaleLinear().range([height, 0]), // value -> display
+        yMap = function(d) { return yScale(yValue(d));}, // data -> display
+        yAxis = d3.axisLeft().scale(yScale);
+
+    // setup fill color
+    var cValue = function(d) { return d.key;},
+        color = d3.scaleOrdinal(d3.schemeCategory20);
+
+    // add the graph canvas to the body of the webpage
+    var svg = d3.select("#graph-display").append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    // add the tooltip area to the webpage
+    var tooltip = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
+    // don't want dots overlapping axis, so add in buffer to data domain
+  xScale.domain([d3.min(dataset, xValue) - 1, d3.max(dataset, xValue) + 1]);
+  yScale.domain([d3.min(dataset, yValue) - 1, d3.max(dataset, yValue) + 1]);
+
+  // x-axis
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+    .append("text")
+      .attr("fill", "#000")
+      .attr("transform", "rotate(0)")
+      .attr("y", 17)
+      .attr("dy", "0.71em")
+      .attr("text-anchor", "start")
+      .text("Average Speed");
+
+  // y-axis
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+    .append("text")
+      .attr("fill", "#000")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", "0.71em")
+      .attr("text-anchor", "end")
+      .text("Average Duration");
+
+  // draw dots
+  svg.selectAll(".dot")
+      .data(dataset)
+    .enter().append("circle")
+      .attr("class", "dot")
+      .attr("r", 3.5)
+      .attr("cx", xMap)
+      .attr("cy", yMap)
+      .style("fill", function(d) { return color(cValue(d));}) 
+      .on("mouseover", function(d) {
+          tooltip.transition()
+               .duration(200)
+               .style("opacity", .9);
+          tooltip.html(d.key + "<br/> (Average Speed: " + xValue(d) 
+	        + ", Average Duration: " + yValue(d) + ")")
+               .style("left", (d3.event.pageX + 5) + "px")
+               .style("top", (d3.event.pageY - 28) + "px");
+      })
+      .on("mouseout", function(d) {
+          tooltip.transition()
+               .duration(500)
+               .style("opacity", 0);
+      });
+
+  // draw legend
+  var legend = svg.selectAll(".legend")
+      .data(color.domain())
+    .enter().append("g")
+      .attr("class", "legend")
+      .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+  // draw legend colored rectangles
+  legend.append("rect")
+      .attr("x", width - 18)
+      .attr("width", 18)
+      .attr("height", 18)
+      .style("fill", color);
+
+  // draw legend text
+  legend.append("text")
+      .attr("x", width - 24)
+      .attr("y", 9)
+      .attr("dy", ".35em")
+      .style("text-anchor", "end")
+      .text(function(d) { return d;})
+
+}
+
+function horizontalBarChart(e){
+
+    var hourParser = d3.isoParse;
+
+    var dataset = d3.nest()
+    .key(function (d) { return d.taxiid }).sortKeys(d3.ascending)
+    .rollup(function (d) { return d3.sum(d, function (g) { return g.distance; });})
+    .entries(e);
+    console.log(JSON.stringify(dataset));
+
+ var margin =  {
+        top: 20,
+        right: 20,
+        bottom: 50,
+    left: 60
+    }, 
+    width = 960 - margin.left - margin.right,
+    height = 900 - margin.top - margin.bottom;
+
+    var svg = d3.select("#graph-display").append("svg").attr("width", width + margin.left + margin.right)
+                    .attr("height", height + margin.top + margin.bottom)
+                    .append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    svg.append("g").attr("Fuckin' text yo");
+    var tooltip = d3.select("body").append("div").attr("class", "toolTip");
+    
+    var x = d3.scaleLinear().range([0, width]);
+    var y = d3.scaleBand().range([height, 0]);
+
+  
+  
+  	dataset.sort(function(a, b) { return a.value - b.value; });
+  
+  	x.domain([0, d3.max(dataset, function(d) { return d.value; })]);
+    y.domain(dataset.map(function(d) { return d.key; })).padding(0.1);
+
+     svg.append("g")
+    .append("text")
+    .attr("x", width/2)             
+    .attr("y", 0)
+    .attr("text-anchor", "middle")  
+    .attr('dy', -8)
+    .text("Visualizing total distance traveled per taxi: ");
+
+
+    svg.append("g")
+        .attr("class", "x axis")
+       	.attr("transform", "translate(0," + height + ")")
+      	.call(d3.axisBottom(x).ticks(5).tickFormat(function(d) { return parseInt(d / 1000); }).tickSizeInner([-height]));
+
+    svg.append("g")
+        .attr("class", "y axis")
+        .call(d3.axisLeft(y));
+
+    svg.selectAll(".bar")
+        .data(dataset)
+      .enter().append("rect")
+        .attr("class", "bar")
+        .attr("x", 0)
+        .attr("height", y.bandwidth())
+        .attr("y", function(d) { return y(d.key); })
+        .attr("width", function(d) { return x(d.value); })
+        .on("mousemove", function(d){
+            tooltip
+              .style("left", d3.event.pageX - 50 + "px")
+              .style("top", d3.event.pageY - 70 + "px")
+              .style("display", "inline-block")
+              .html("Taxi ID: " + (d.key) + "<br>" + (d.value / 1000) + " Kilometers");
+        })
+    		.on("mouseout", function(d){ tooltip.style("display", "none");});
+
+
 }
 
 function barChart(e) {
@@ -166,11 +463,9 @@ function barChart(e) {
 
 
     var x = d3.scaleBand().rangeRound([0, width], .05).padding(0.1);
-
     var y = d3.scaleLinear().range([height, 0]);
 
     var xAxis = d3.axisBottom().scale(x).tickFormat(d3.timeFormat("%I:%M %p"));
-
     var yAxis = d3.axisLeft().scale(y).ticks(10);
 
     var svg = d3.select("#graph-display").append("svg")
@@ -197,6 +492,16 @@ function barChart(e) {
 
     x.domain(dataset.map(function(d) { return new Date(d.key); }));
     y.domain([0, d3.max(dataset, function(d) { return d.value; })]);
+
+    svg.append("g")
+    .append("text")
+    .attr("x", width/2)             
+    .attr("y", 0)
+    .attr("text-anchor", "middle")  
+    .attr('dy', -8)
+    .text("Visualizing average trip speed per hour: ");
+
+
 
    svg.selectAll(".bar")
     .data(dataset)
@@ -235,9 +540,89 @@ function barChart(e) {
       .attr("dy", ".71em")
       .style("text-anchor", "end")
       .text("Value");
-
 }
 
+function heatMap(e){
+    
+    var itemSize = 22,
+      cellSize = itemSize - 1,
+      margin = {top: 120, right: 20, bottom: 20, left: 110};
+      
+    var width = 750 - margin.right - margin.left,
+      height = 300 - margin.top - margin.bottom;
+
+
+    var dataset = d3.nest()
+        .key(function (d) { return d3.timeHour.round(hourParser(d.starttime)); }).sortKeys(d3.ascending)
+        .rollup(function (d) { return d.length })
+        .entries(e);
+        console.log(JSON.stringify(dataset));
+
+        var x = d3.scaleBand().rangeRound([0, width], .05).padding(0.1);
+        var y = d3.scaleLinear().range([height, 0]);
+
+        x.domain(dataset.map(function(d) { return new Date(d.key); }));
+        y.domain([0, d3.max(dataset, function(d) { return d.value; })]);
+
+    var xScale = d3.scaleOrdinal()
+        .domain(x_elements)
+        .rangeBands([0, x_elements.length * itemSize]);
+
+    var xAxis = d3.axisTop()
+        .scale(xScale)
+        .tickFormat(function (d) {
+            return d;
+        });
+
+    var yScale = d3.scaleOrdinal()
+        .domain(y_elements)
+        .rangeBands([0, y_elements.length * itemSize]);
+
+    var yAxis = d3.axisLeft()
+        .scale(yScale)
+        .tickFormat(function (d) {
+            return d;
+        });
+
+    var colorScale = d3.scale.threshold()
+        .domain([0.85, 1])
+        .range(["#2980B9", "#E67E22", "#27AE60", "#27AE60"]);
+
+    var svg = d3.select("#graph-display").append("svg")
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var cells = svg.selectAll('rect')
+        .data(data)
+        .enter().append('g').append('rect')
+        .attr('class', 'cell')
+        .attr('width', cellSize)
+        .attr('height', cellSize)
+        .attr('y', function(d) { return yScale(d.key); })
+        .attr('x', function(d) { return xScale(d.value  ); })
+        .attr('fill', function(d) { return colorScale(d.value); });
+
+    svg.append("g")
+        .attr("class", "y axis")
+        .call(yAxis)
+        .selectAll('text')
+        .attr('font-weight', 'normal');
+
+    svg.append("g")
+        .attr("class", "x axis")
+        .call(xAxis)
+        .selectAll('text')
+        .attr('font-weight', 'normal')
+        .style("text-anchor", "start")
+        .attr("dx", ".8em")
+        .attr("dy", ".5em")
+        .attr("transform", function (d) {
+            return "rotate(-65)";
+        });
+}
 
 //*****************************************************************************************************************************************
 // DrawRS Function:
